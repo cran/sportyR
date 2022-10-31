@@ -12,7 +12,7 @@ test_that(
     regexp = glue::glue(
       "NCAA can be used in the following functions: geom_baseball(), ",
       "geom_basketball(), geom_football(), geom_hockey(), geom_soccer(), ",
-      "or geom_tennis()"
+      "geom_tennis(), or geom_volleyball()"
     )
   )
   expect_message(
@@ -57,15 +57,6 @@ test_that(
     cani_plot_league("nfl"),
     fixed = TRUE,
     regexp = "A plot for NFL can be created via the geom_football() function"
-  )
-
-  expect_message(
-    cani_plot_sport("curling"),
-    fixed = TRUE,
-    regexp = glue::glue(
-      "A plot for curling can be created via the geom_curling() function ",
-      "for the following league: WCF"
-    )
   )
 })
 

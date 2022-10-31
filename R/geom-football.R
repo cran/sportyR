@@ -25,6 +25,10 @@
 #'   this feature
 #' @param field_border_outline A hexadecimal string representing the color to
 #'   use for this feature
+#' @param red_zone_border A hexadecimal string representing the color to use for
+#'   this feature
+#' @param red_zone_border_outline A hexadecimal string representing the color to
+#'   use for this feature
 #' @param major_yard_line A hexadecimal string representing the color to use for
 #'   this feature
 #' @param goal_line A hexadecimal string representing the color to use for this
@@ -61,7 +65,9 @@ football_features_set_colors <- function(plot_background = NULL,
                                          end_line = "#ffffff",
                                          sideline = "#ffffff",
                                          field_border = "#196f0c",
-                                         field_border_outline = "#ffffff",
+                                         field_border_outline = "#ffffff00",
+                                         red_zone_border = "#196f0c00",
+                                         red_zone_border_outline = "#ffffff00",
                                          major_yard_line = "#ffffff",
                                          goal_line = "#ffffff",
                                          minor_yard_line = "#ffffff",
@@ -84,6 +90,8 @@ football_features_set_colors <- function(plot_background = NULL,
     sideline = sideline,
     field_border = field_border,
     field_border_outline = field_border_outline,
+    red_zone_border = red_zone_border,
+    red_zone_border_outline = red_zone_border_outline,
     major_yard_line = major_yard_line,
     goal_line = goal_line,
     minor_yard_line = minor_yard_line,
@@ -113,6 +121,8 @@ football_features_set_colors <- function(plot_background = NULL,
 #'
 #'   \describe{
 #'     \item{\code{"full"}}{The full field. This is the default}
+#'     \item{\code{"in_bounds_only"}}{The full in-bounds area of the field}
+#'     \item{\code{"in bounds only"}}{The full in-bounds area of the field}
 #'     \item{\code{"offense"}}{The TV-right half of the field}
 #'     \item{\code{"offence"}}{The TV-right half of the field}
 #'     \item{\code{"offensivehalffield"}}{The TV-right half of the field}
@@ -404,15 +414,13 @@ geom_football <- function(league,
     #### Defensive Half Field ####
     defensive_half_field = football_half_field(
       field_length = field_params$field_length %or% 0,
-      field_width = field_params$field_width %or% 0,
-      endzone_length = field_params$endzone_length %or% 0
+      field_width = field_params$field_width %or% 0
     ),
 
     #### Offensive Half Field ####
     offensive_half_field = football_half_field(
       field_length = field_params$field_length %or% 0,
-      field_width = field_params$field_width %or% 0,
-      endzone_length = field_params$endzone_length %or% 0
+      field_width = field_params$field_width %or% 0
     ),
 
     #### Endzone ####
@@ -462,7 +470,8 @@ geom_football <- function(league,
       team_bench_width = field_params$team_bench_width %or% 0,
       team_bench_area_border_thickness =
         field_params$team_bench_area_border_thickness %or% 0,
-      extra_apron_padding = field_params$extra_apron_padding %or% 0
+      extra_apron_padding = field_params$extra_apron_padding %or% 0,
+      bench_shape = field_params$bench_shape %or% "rectangle"
     ),
 
     ## Surface Boundaries ------------------------------------------------------
@@ -525,6 +534,16 @@ geom_football <- function(league,
       surrounds_team_bench_area =
         field_params$field_border_behind_bench %or% TRUE,
       bench_shape = field_params$bench_shape %or% "rectangle"
+    ),
+
+    #### Red Zone Border ####
+    red_zone_border = football_red_zone_border(
+      feature_thickness = field_params$field_border_thickness %or% 0
+    ),
+
+    #### Red Zone Border Outline ####
+    red_zone_border_outline = football_red_zone_border_outline(
+      feature_thickness = field_params$minor_line_thickness %or% 0
     ),
 
     ## Surface Lines -----------------------------------------------------------
@@ -641,7 +660,8 @@ geom_football <- function(league,
     y_anchor = 0,
     feature_df = field_features$field_apron,
     feature_color = feature_colors$field_apron,
-    reflect_x = FALSE,
+    feature_outline_color = feature_colors$field_apron,
+    reflect_x = TRUE,
     reflect_y = FALSE,
     x_trans = x_trans,
     y_trans = y_trans,
@@ -699,67 +719,6 @@ geom_football <- function(league,
     y_anchor = 0,
     feature_df = field_features$offensive_half,
     feature_color = feature_colors$offensive_half,
-    reflect_x = FALSE,
-    reflect_y = FALSE,
-    x_trans = x_trans,
-    y_trans = y_trans,
-    rotation = rotation
-  )
-
-  #### Sideline ####
-  field_plot <- add_feature(
-    field_plot,
-    x_anchor = 0,
-    y_anchor = (field_params$field_width %or% 0) / 2,
-    feature_df = field_features$sideline,
-    feature_color = feature_colors$sideline,
-    feature_outline_color = feature_colors$sideline,
-    reflect_x = FALSE,
-    reflect_y = TRUE,
-    x_trans = x_trans,
-    y_trans = y_trans,
-    rotation = rotation
-  )
-
-  #### End Line ####
-  field_plot <- add_feature(
-    field_plot,
-    x_anchor = ((field_params$field_length %or% 0) / 2) +
-      (field_params$endzone_length %or% 0),
-    y_anchor = 0,
-    feature_df = field_features$end_line,
-    feature_color = feature_colors$end_line,
-    feature_outline_color = feature_colors$end_line,
-    reflect_x = TRUE,
-    reflect_y = FALSE,
-    x_trans = x_trans,
-    y_trans = y_trans,
-    rotation = rotation
-  )
-
-  #### Defensive Endzone ####
-  field_plot <- add_feature(
-    field_plot,
-    x_anchor = -((field_params$field_length %or% 0) / 2) -
-      ((field_params$endzone_length %or% 0) / 2),
-    y_anchor = 0,
-    feature_df = field_features$endzone,
-    feature_color = feature_colors$defensive_endzone,
-    reflect_x = FALSE,
-    reflect_y = FALSE,
-    x_trans = x_trans,
-    y_trans = y_trans,
-    rotation = rotation
-  )
-
-  #### Offensive Endzone ####
-  field_plot <- add_feature(
-    field_plot,
-    x_anchor = ((field_params$field_length %or% 0) / 2) +
-      ((field_params$endzone_length %or% 0) / 2),
-    y_anchor = 0,
-    feature_df = field_features$endzone,
-    feature_color = feature_colors$offensive_endzone,
     reflect_x = FALSE,
     reflect_y = FALSE,
     x_trans = x_trans,
@@ -848,6 +807,100 @@ geom_football <- function(league,
     feature_outline_color = feature_colors$team_bench_area_outline,
     reflect_x = FALSE,
     reflect_y = TRUE,
+    x_trans = x_trans,
+    y_trans = y_trans,
+    rotation = rotation
+  )
+
+  #### Red Zone Border ####
+  field_plot <- add_feature(
+    field_plot,
+    x_anchor = ((field_params$field_length %or% 0) / 2) - 20,
+    y_anchor = ((field_params$field_width %or% 0) / 2) +
+      (field_params$boundary_line_thickness %or% 0),
+    feature_df = field_features$red_zone_border,
+    feature_color = feature_colors$red_zone_border,
+    feature_outline_color = feature_colors$red_zone_border,
+    reflect_x = TRUE,
+    reflect_y = TRUE,
+    x_trans = x_trans,
+    y_trans = y_trans,
+    rotation = rotation
+  )
+
+  #### Red Zone Border Outline ####
+  field_plot <- add_feature(
+    field_plot,
+    x_anchor = ((field_params$field_length %or% 0) / 2) - 20,
+    y_anchor = ((field_params$field_width %or% 0) / 2) +
+      (field_params$boundary_line_thickness %or% 0) +
+      (field_params$field_border_thickness %or% 0),
+    feature_df = field_features$red_zone_border_outline,
+    feature_color = feature_colors$red_zone_border_outline,
+    feature_outline_color = feature_colors$red_zone_border_outline,
+    reflect_x = TRUE,
+    reflect_y = TRUE,
+    x_trans = x_trans,
+    y_trans = y_trans,
+    rotation = rotation
+  )
+
+  #### Sideline ####
+  field_plot <- add_feature(
+    field_plot,
+    x_anchor = 0,
+    y_anchor = (field_params$field_width %or% 0) / 2,
+    feature_df = field_features$sideline,
+    feature_color = feature_colors$sideline,
+    feature_outline_color = feature_colors$sideline,
+    reflect_x = FALSE,
+    reflect_y = TRUE,
+    x_trans = x_trans,
+    y_trans = y_trans,
+    rotation = rotation
+  )
+
+  #### End Line ####
+  field_plot <- add_feature(
+    field_plot,
+    x_anchor = ((field_params$field_length %or% 0) / 2) +
+      (field_params$endzone_length %or% 0),
+    y_anchor = 0,
+    feature_df = field_features$end_line,
+    feature_color = feature_colors$end_line,
+    feature_outline_color = feature_colors$end_line,
+    reflect_x = TRUE,
+    reflect_y = FALSE,
+    x_trans = x_trans,
+    y_trans = y_trans,
+    rotation = rotation
+  )
+
+  #### Defensive Endzone ####
+  field_plot <- add_feature(
+    field_plot,
+    x_anchor = -((field_params$field_length %or% 0) / 2) -
+      ((field_params$endzone_length %or% 0) / 2),
+    y_anchor = 0,
+    feature_df = field_features$endzone,
+    feature_color = feature_colors$defensive_endzone,
+    reflect_x = FALSE,
+    reflect_y = FALSE,
+    x_trans = x_trans,
+    y_trans = y_trans,
+    rotation = rotation
+  )
+
+  #### Offensive Endzone ####
+  field_plot <- add_feature(
+    field_plot,
+    x_anchor = ((field_params$field_length %or% 0) / 2) +
+      ((field_params$endzone_length %or% 0) / 2),
+    y_anchor = 0,
+    feature_df = field_features$endzone,
+    feature_color = feature_colors$offensive_endzone,
+    reflect_x = FALSE,
+    reflect_y = FALSE,
     x_trans = x_trans,
     y_trans = y_trans,
     rotation = rotation
@@ -1011,20 +1064,41 @@ geom_football <- function(league,
     (field_params$boundary_line_thickness %or% 0) +
     (field_params$field_border_thickness %or% 0) +
     (field_params$minor_line_thickness %or% 0) +
-    5
+    (field_params$extra_apron_padding %or% 5)
   half_field_width <- ((field_params$field_width %or% 0) / 2) +
     (field_params$boundary_line_thickness %or% 0) +
     (field_params$restricted_area_width %or% 0) +
     (field_params$coaching_box_width %or% 0) +
     (field_params$team_bench_width %or% 0) +
     (field_params$field_border_thickness %or% 0) +
+    (field_params$team_bench_area_border_thickness %or% 0) +
     (field_params$minor_line_thickness %or% 0) +
-    5
+    (field_params$extra_apron_padding %or% 5)
 
   if (is.null(xlims)) {
     xlims <- switch(tolower(display_range),
       # Full surface
       "full" = c(-half_field_length, half_field_length),
+      "in_bounds_only" = c(
+        -(
+          ((field_params$field_length %or% 0) / 2) +
+            (field_params$endzone_length %or% 0) +
+            (field_params$boundary_line_thickness %or% 0)
+        ),
+        ((field_params$field_length %or% 0) / 2) +
+          (field_params$endzone_length %or% 0) +
+          (field_params$boundary_line_thickness %or% 0)
+      ),
+      "in bounds only" = c(
+        -(
+          ((field_params$field_length %or% 0) / 2) +
+            (field_params$endzone_length %or% 0) +
+            (field_params$boundary_line_thickness %or% 0)
+        ),
+        ((field_params$field_length %or% 0) / 2) +
+          (field_params$endzone_length %or% 0) +
+          (field_params$boundary_line_thickness %or% 0)
+      ),
 
       # Half-field plots
       "offense" = c(0, half_field_length),
@@ -1099,6 +1173,23 @@ geom_football <- function(league,
     ylims <- switch(tolower(display_range),
       # Full surface
       "full" = c(-half_field_width, half_field_width),
+      "in_bounds_only" = c(
+        -(
+          ((field_params$field_width %or% 0) / 2) +
+            (field_params$boundary_line_thickness %or% 0)
+        ),
+        ((field_params$field_width %or% 0) / 2) +
+          (field_params$boundary_line_thickness %or% 0)
+      ),
+
+      "in bounds only" = c(
+        -(
+          ((field_params$field_width %or% 0) / 2) +
+            (field_params$boundary_line_thickness %or% 0)
+        ),
+        ((field_params$field_width %or% 0) / 2) +
+          (field_params$boundary_line_thickness %or% 0)
+      ),
 
       # Half-field plots
       "offense" = c(-half_field_width, half_field_width),
@@ -1184,7 +1275,8 @@ geom_football <- function(league,
   field_plot <- field_plot +
     ggplot2::coord_fixed(
       xlim = xlims,
-      ylim = ylims
+      ylim = ylims,
+      expand = FALSE
     )
 
   # Return the ggplot2 instance

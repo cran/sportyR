@@ -5,10 +5,22 @@
 
 - Fixed [#15](https://github.com/sportsdataverse/sportyR/issues/15). All outline colors are respected
 
+- Added red zone border and border outline to football fields
+
+- Changed default coloring of football field border outline
+
+- Fixed issue with field border thickness when plotting behind the bench
+
+- Fixed [#18](https://github.com/sportsdataverse/sportyR/issues/18). Can now constrain all plots to only display in-bound playing area (plus sidelines)
+
+- Corrected football field layering to work better with hex-alpha color specifications (layering of colors previously caused issues)
+
 ## Internal Changes
 - Renamed files to use `-` (hyphen) instead of `_` (underscore) across package
 
 - New function, `is_hex()`, checks if a value is valid hexadecimal (relates to [#15](https://github.com/sportsdataverse/sportyR/issues/15))
+
+- [Animating Tracking Data](https://sportyr.sportsdataverse.org/articles/animating-tracking-data.html) vignette now uses images hosted on GitHub to avoid the need to render at run time
 
 ## New Sports and Leagues Supported
 
@@ -16,6 +28,9 @@
 - FIVB
 - NCAA
 - USA Volleyball
+
+### Curling
+- Curling Canada
 
 # sportyR 2.0.1
 

@@ -1,3 +1,38 @@
+# sportyR 2.2.1
+
+- Faceting in `{ggplot2}` now works as expected (#27, @mrcaseb)
+- Fixed link in vignette to point to POSIT, not RStudio
+
+# sportyR 2.2.0
+
+## Patches/Bug Fixes
+- Fixed [#24](https://github.com/sportsdataverse/sportyR/issues/24). Invalid league errors should now be more explicit
+
+## Changes to Existing Sports
+
+- MLB and MiLB bases are now 18" by default per the 2023 rules change
+
+## New Sports and Leagues Supported
+
+### Lacrosse
+- National Lacrosse League
+- NCAA Men's Lacrosse
+- NCAA Women's Lacrosse
+- Premier Lacrosse League
+- USA Men's Lacrosse
+- USA Women's Lacrosse
+- World Lacrosse
+
+## Internal Changes
+- Re-aligned `switch()` statements to have condition and cases with matching indentation to improve readability
+
+- Updated syntax in `geom_football()` to avoid tidy syntax deprecation warning
+
+- Added `load_default_parameters()` function for faster debugging internally. This function allows all defaults of a particular `geom_{sport}()` function to be loaded and set as environment variables rather than having to set each one individually
+
+- Updated [`data-raw/internal-datasets.R`](https://github.com/sportsdataverse/sportyR/blob/main/data-raw/internal-datasets.R) to clear environment and reload current version of package upon sourcing for debugging
+
+
 # sportyR 2.1.0
 
 ## Patches/Bug Fixes

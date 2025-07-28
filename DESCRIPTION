@@ -1,6 +1,6 @@
 Package: sportyR
 Title: Plot Scaled 'ggplot' Representations of Sports Playing Surfaces
-Version: 2.2.2
+Version: 2.2.3
 Authors@R: 
     c(
       person(
@@ -17,9 +17,9 @@ Description: Create scaled 'ggplot' representations of playing surfaces.
     tracking data.
 License: GPL (>= 3)
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 Imports: ggfittext, ggplot2, glue, grid, rlang
-Depends: R (>= 3.3)
+Depends: R (>= 3.5)
 Suggests: data.table, gganimate, testthat (>= 3.0.0), knitr, rmarkdown,
         curl
 Config/testthat/edition: 3
@@ -29,8 +29,9 @@ BugReports: https://github.com/sportsdataverse/sportyR/issues
 VignetteBuilder: knitr
 SystemRequirements: pandoc (>= 1.12.3), pandoc-citeproc
 NeedsCompilation: no
-Packaged: 2024-02-15 09:40:43 UTC; rossdrucker
-Author: Ross Drucker [aut, cre] (<https://orcid.org/0000-0002-0688-0235>)
+Packaged: 2025-07-28 18:53:58 UTC; rossdrucker
+Author: Ross Drucker [aut, cre] (ORCID:
+    <https://orcid.org/0000-0002-0688-0235>)
 Maintainer: Ross Drucker <ross.a.drucker@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-02-15 10:10:02 UTC
+Date/Publication: 2025-07-28 19:40:02 UTC

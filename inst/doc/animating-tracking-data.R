@@ -32,22 +32,22 @@ example_nfl_play[example_nfl_play["team"] == "away", "color"] <- "#ffb612"
 example_nfl_play[example_nfl_play["team"] == "football", "color"] <- "#624a2e"
 
 ## ----bdb-example-draw-field, eval = FALSE-------------------------------------
-#  # Create the field
-#  nfl_field <- geom_football("nfl", x_trans = 60, y_trans = 26.6667)
-#  
-#  # Display the field
-#  nfl_field
+# # Create the field
+# nfl_field <- geom_football("nfl", x_trans = 60, y_trans = 26.6667)
+# 
+# # Display the field
+# nfl_field
 
 ## ----bdb-example-animate-play, eval = FALSE-----------------------------------
-#  # Add the points on the field
-#  play_anim <- nfl_field +
-#    geom_point(
-#      data = example_nfl_play,
-#      aes(x, y),
-#      color = example_nfl_play$color
-#    ) +
-#    transition_time(example_nfl_play$frameId)
-#  
-#  # Show the animation
-#  play_anim
+# # Add the points on the field
+# play_anim <- nfl_field +
+#   geom_point(
+#     data = example_nfl_play,
+#     aes(x, y),
+#     color = example_nfl_play$color
+#   ) +
+#   transition_time(example_nfl_play$frameId)
+# 
+# # Show the animation
+# play_anim
 

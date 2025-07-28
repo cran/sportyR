@@ -9,8 +9,8 @@ knitr::opts_chunk$set(
 options(rmarkdown.html_vignette.check_title = FALSE)
 
 ## ----setup, eval = FALSE------------------------------------------------------
-#  library(sportyR)
-#  library(ggplot2)
+# library(sportyR)
+# library(ggplot2)
 
 ## ----setup-ran, echo = FALSE--------------------------------------------------
 library(sportyR)

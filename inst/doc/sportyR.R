@@ -12,12 +12,12 @@ options(rmarkdown.html_vignette.check_title = FALSE)
 library(sportyR)
 
 ## ----install-package-cran, eval = FALSE---------------------------------------
-#  # Install released version from CRAN
-#  install.packages("sportyR")
+# # Install released version from CRAN
+# install.packages("sportyR")
 
 ## ----install-package-github, eval = FALSE-------------------------------------
-#  # Install development version from GitHub
-#  devtools::install_github("sportsdataverse/sportyR")
+# # Install development version from GitHub
+# devtools::install_github("sportsdataverse/sportyR")
 
 ## ----load-sportyR-------------------------------------------------------------
 # Required to use package

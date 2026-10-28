@@ -340,14 +340,6 @@ geom_hockey <- function(league,
       faceoff_line_width = rink_params$faceoff_line_width %or% 0
     ),
 
-    odzone_faceoff_lines_2 = hockey_odzone_faceoff_lines(
-      feature_thickness = rink_params$minor_line_thickness %or% 0,
-      faceoff_line_dist_x = -1 * rink_params$faceoff_line_dist_x %or% 0,
-      faceoff_line_dist_y = rink_params$faceoff_line_dist_y %or% 0,
-      faceoff_line_length = -1 * rink_params$faceoff_line_length %or% 0,
-      faceoff_line_width = rink_params$faceoff_line_width %or% 0
-    ),
-
     ## Surface Features --------------------------------------------------------
 
     #### Center Faceoff Spot ####
@@ -420,6 +412,14 @@ geom_hockey <- function(league,
     )
   )
 
+  # The second set of faceoff lines is the mirror image of the first, so that
+  # the thickness of the lines stays on the same side of each edge
+  rink_features[["odzone_faceoff_lines_2"]] <- reflect(
+    rink_features$odzone_faceoff_lines_1,
+    over_x = FALSE,
+    over_y = TRUE
+  )
+
   #### Goaltender's Restricted Area (when necessary) ####
   if (rink_params$has_trapezoid %or% FALSE) {
     rink_features[["goaltenders_restricted_area"]] <-
@@ -435,18 +435,22 @@ geom_hockey <- function(league,
 
   # Coordinate Transformations -------------------------------------------------
 
-  # Convert the units as needed
-  if (
-    !is.null(rink_units) &&
-    tolower(rink_params$rink_units %or% "ft") != tolower(rink_units)
-  )  {
-    rink_features <- lapply(
-      rink_features,
-      convert_units,
-      from_unit = rink_params$rink_units %or% "ft",
-      to_unit = rink_units,
-      conversion_columns = c("x", "y")
-    )
+  # Convert the units as needed. The surface is drawn in the rule book's
+  # units, so feature anchors and the display range stay consistent with the
+  # features, and the finished plot is scaled to the requested units below.
+  # Translations and limits passed in are in the requested units
+  unit_factor <- unit_conversion_factor(
+    from_unit = rink_params$rink_units %or% "ft",
+    to_unit = rink_units,
+    surface = "rink"
+  )
+  x_trans <- x_trans / unit_factor
+  y_trans <- y_trans / unit_factor
+  if (!is.null(xlims)) {
+    xlims <- xlims / unit_factor
+  }
+  if (!is.null(ylims)) {
+    ylims <- ylims / unit_factor
   }
 
   # Generate the Plot ----------------------------------------------------------
@@ -1087,6 +1091,11 @@ geom_hockey <- function(league,
     xlims <- c(min(plot_lims$x), max(plot_lims$x))
     ylims <- c(min(plot_lims$y), max(plot_lims$y))
   }
+
+  # Scale the finished surface and its limits to the requested units
+  rink_plot <- scale_plot_units(rink_plot, unit_factor)
+  xlims <- xlims * unit_factor
+  ylims <- ylims * unit_factor
 
   ## Force the aspect ratio to be 1/1, and the x and y limits to be set
   rink_plot <- rink_plot +

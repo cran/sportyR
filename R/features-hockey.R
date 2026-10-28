@@ -515,17 +515,15 @@ hockey_goaltenders_restricted_area <- function(rink_length = 0,
   half_short_base_width <- short_base_width / 2
   half_long_base_width <- long_base_width / 2
 
-  # Now trace out the trapezoid. NOTE: The absolute value is used here to always
-  # force the calculation to be done for the right side of the ice (in TV view),
-  # which will be adjusted as necessary in the feature's translate_feature()
-  # method
-  trapezoid_df <- data.frame(
+  # Now trace out the trapezoid. It is made of two parallelogram strips (one on
+  # each side of the net) that start on the goal line and run to the boards. The
+  # strips are drawn as separate rings so that neither ring crosses or retraces
+  # itself. NOTE: The absolute value is used here to always force the
+  # calculation to be done for the right side of the ice (in TV view), which
+  # will be adjusted as necessary in the feature's translate_feature() method
+  upper_strip_df <- data.frame(
     x = c(
       abs(x_anchor),
-      rink_length / 2,
-      rink_length / 2,
-      abs(x_anchor) - (feature_thickness / 2),
-      abs(x_anchor) - (feature_thickness / 2),
       rink_length / 2,
       rink_length / 2,
       abs(x_anchor),
@@ -536,13 +534,17 @@ hockey_goaltenders_restricted_area <- function(rink_length = 0,
       half_long_base_width,
       half_long_base_width - feature_thickness,
       half_short_base_width - feature_thickness,
-      -half_short_base_width + feature_thickness,
-      -half_long_base_width + feature_thickness,
-      -half_long_base_width,
-      -half_short_base_width,
       half_short_base_width
     )
   )
+
+  trapezoid_df <- rbind(
+    upper_strip_df,
+    reflect(upper_strip_df, over_x = TRUE, over_y = FALSE)
+  )
+
+  # Give each strip its own polygon group so that the plot does not connect them
+  trapezoid_df$group <- rep(1:2, each = nrow(upper_strip_df))
 
   # See note above for an explanation of why the absolute value is used here
   trapezoid_df["x"] <- trapezoid_df["x"] - abs(x_anchor)
@@ -685,6 +687,16 @@ hockey_goal_crease_outline <- function(feature_radius = 0,
     theta <- acos(half_crease_width / feature_radius) / pi
   }
 
+  # The inner arc meets the inner straight sides of the crease, which are
+  # inset by feature_thickness, so it starts at its own angle
+  inner_radius <- feature_radius - feature_thickness
+  if (inner_radius <= 0 ||
+      abs((half_crease_width - feature_thickness) / inner_radius) > 1) {
+    inner_theta <- theta
+  } else {
+    inner_theta <- acos((half_crease_width - feature_thickness) / inner_radius) / pi
+  }
+
   goal_crease_outline_df <- switch(
     crease_style,
 
@@ -733,9 +745,9 @@ hockey_goal_crease_outline <- function(feature_radius = 0,
       ),
       create_circle(
         center = c(0, 0),
-        start = 1.5 - theta,
-        end = 0.5 + theta,
-        r = feature_radius - feature_thickness
+        start = 1.5 - inner_theta,
+        end = 0.5 + inner_theta,
+        r = inner_radius
       ),
       data.frame(
         x = c(
@@ -847,30 +859,38 @@ hockey_goal_crease_outline <- function(feature_radius = 0,
     ),
 
     # nhl92 crease style: full semi-circle outline with two L-shaped marks
-    # adjoining the semi-circle, but not extending back towards the goal line
-    "nhl92" = rbind(
-      create_circle(
-        center = c(0, 0),
-        start = 0.5,
-        end = 1.5,
-        r = feature_radius
-      ),
-      create_circle(
-        center = c(0, 0),
-        start = 1.5,
-        end = 1.5 - theta,
-        r = feature_radius - feature_thickness
-      ),
-      data.frame(
+    # adjoining the semi-circle, but not extending back towards the goal line.
+    # The semi-circle's band and each L-mark are separate rings, each in its own
+    # polygon group, so that no ring crosses itself or another
+    "nhl92" = {
+      arc_band_df <- rbind(
+        create_circle(
+          center = c(0, 0),
+          start = 0.5,
+          end = 1.5,
+          r = feature_radius
+        ),
+        create_circle(
+          center = c(0, 0),
+          start = 1.5,
+          end = 0.5,
+          r = max(inner_radius, 0)
+        ),
+        data.frame(
+          x = 0,
+          y = feature_radius
+        )
+      )
+
+      lower_l_mark_df <- data.frame(
         x = c(
-          -notch_dist_x,
+          -notch_dist_x - feature_thickness,
           -notch_dist_x + notch_width,
           -notch_dist_x + notch_width,
           -notch_dist_x,
           -notch_dist_x,
           -notch_dist_x - feature_thickness,
-          -notch_dist_x - feature_thickness,
-          -notch_dist_x
+          -notch_dist_x - feature_thickness
         ),
         y = c(
           -half_crease_width,
@@ -879,49 +899,19 @@ hockey_goal_crease_outline <- function(feature_radius = 0,
           -half_crease_width + feature_thickness,
           -half_crease_width + feature_thickness + notch_width,
           -half_crease_width + feature_thickness + notch_width,
-          -half_crease_width,
           -half_crease_width
         )
-      ),
-      create_circle(
-        center = c(0, 0),
-        start = 1.5 - theta,
-        end = 0.5 + theta,
-        r = feature_radius - feature_thickness
-      ),
-      data.frame(
-        x = c(
-          -notch_dist_x,
-          -notch_dist_x + notch_width,
-          -notch_dist_x + notch_width,
-          -notch_dist_x,
-          -notch_dist_x,
-          -notch_dist_x - feature_thickness,
-          -notch_dist_x - feature_thickness,
-          -notch_dist_x
-        ),
-        y = c(
-          half_crease_width,
-          half_crease_width,
-          half_crease_width - feature_thickness,
-          half_crease_width - feature_thickness,
-          half_crease_width - feature_thickness - notch_width,
-          half_crease_width - feature_thickness - notch_width,
-          half_crease_width,
-          half_crease_width
-        )
-      ),
-      create_circle(
-        center = c(0, 0),
-        start = 0.5 + theta,
-        end = 0.5,
-        r = feature_radius - feature_thickness
-      ),
-      data.frame(
-        x = c(0, 0),
-        y = c(feature_radius - feature_thickness, feature_radius)
       )
-    ),
+
+      upper_l_mark_df <- reflect(lower_l_mark_df, over_x = TRUE, over_y = FALSE)
+
+      nhl92_df <- rbind(arc_band_df, lower_l_mark_df, upper_l_mark_df)
+      nhl92_df$group <- rep(
+        1:3,
+        c(nrow(arc_band_df), nrow(lower_l_mark_df), nrow(upper_l_mark_df))
+      )
+      nhl92_df
+    },
 
     # Default case
     data.frame(
@@ -1100,13 +1090,17 @@ hockey_center_faceoff_circle <- function(feature_radius = 0,
     ),
     data.frame(
       x = c(0, 0),
-      y = c(-feature_radius, -feature_radius - feature_thickness)
+      y = c(-feature_radius, -feature_radius + feature_thickness)
     ),
     create_circle(
       center = c(0, 0),
       start = 1.5,
       end = 0.5,
       r = feature_radius - feature_thickness
+    ),
+    data.frame(
+      x = c(0),
+      y = c(feature_radius)
     )
   )
 
@@ -1531,7 +1525,7 @@ hockey_player_bench_outline <- function(feature_thickness = 0,
       bench_length,
       0,
       0,
-      feature_thickness
+      -feature_thickness
     ),
     y = c(
       feature_thickness,

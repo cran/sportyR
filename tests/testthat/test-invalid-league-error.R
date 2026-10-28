@@ -1,3 +1,5 @@
+skip_on_cran()
+
 # If an invalid league is supplied, an error should be returned
 test_that("Error when league is not supplied", {
   # Baseball
@@ -20,6 +22,9 @@ test_that("Error when league is not supplied", {
 
   # Soccer
   expect_error(geom_soccer("invalid_league"))
+
+  # Softball
+  expect_error(geom_softball("invalid_league"))
 
   # Tennis
   expect_error(geom_tennis("invalid_league"))

@@ -77,7 +77,7 @@ lacrosse_defensive_zone <- function(field_length = 0,
     # Create the defensive zone
     dzone_df <- create_rectangle(
       x_min = -field_length / 2,
-      x_max = 0,
+      x_max = -nzone_length / 2,
       y_min = -field_width / 2,
       y_max = field_width / 2
     )
@@ -183,7 +183,7 @@ lacrosse_offensive_zone <- function(field_length = 0,
     )
   } else {
     ozone_df <- create_rectangle(
-      x_min = 0,
+      x_min = nzone_length / 2,
       x_max = field_length / 2,
       y_min = -field_width / 2,
       y_max = field_width / 2
@@ -771,49 +771,69 @@ lacrosse_goal_circle_fill <- function(goal_circle_radius = 0,
 
 #' Lacrosse Goal Arc
 #' 
-#' The arc around the goal circle is a semi-circular area located around the
-#' goal circle (see [lacrosse_goal_circle()]) that may extend back to the end
-#' line, but also may be cut off at the goal line extended. The extension should
-#' be controlled via the \code{goal_arc_extension} parameter. Note: the hash
-#' marks are generated via [lacrosse_goal_fan_hash_mark()]
+#' The arc around the goal circle (the PLL two-point arc) is made of two lines
+#' parallel to the sidelines, \code{goal_arc_parallel_line_to_center} from the
+#' center of the goal line, that run from the end line (see
+#' \code{goal_arc_extension}) until they are \code{goal_arc_radius} from the
+#' center of the goal line, joined by an arc of \code{goal_arc_radius} about the
+#' center of the goal line (2024 PLL Rulebook, II. The Field, G. Two-Point
+#' Arc). When the parallel lines are \code{goal_arc_radius} from the center,
+#' the arc is a semi-circle. Note: the hash marks are generated via
+#' [lacrosse_goal_fan_hash_mark()]
 #'
 #' @param goal_arc_extension The extension from the goal line towards the end
 #'   line
 #' @param goal_arc_radius The outer radius of the goal arc, measured from the
 #'   center of the goal line
 #' @param line_thickness The thickness of the goal arc
+#' @param goal_arc_parallel_line_to_center The distance from the center of the
+#'   goal line to the outer edge of each line parallel to the sidelines,
+#'   measured along the goal line extended. Defaults to \code{goal_arc_radius}
 #'
 #' @return A data frame containing the the bounding coordinates of the goal arc
 #'
 #' @keywords internal
 lacrosse_goal_arc <- function(goal_arc_extension = 0,
                               goal_arc_radius = 0,
-                              line_thickness = 0) {
+                              line_thickness = 0,
+                              goal_arc_parallel_line_to_center =
+                                goal_arc_radius) {
+  # Outer and inner edges of the parallel lines and of the arc
+  w_outer <- min(goal_arc_parallel_line_to_center, goal_arc_radius)
+  w_inner <- w_outer - line_thickness
+  r_inner <- goal_arc_radius - line_thickness
+
+  # Where the parallel lines meet the arc, towards the center of the field
+  x_outer <- -sqrt(max((goal_arc_radius^2) - (w_outer^2), 0))
+  x_inner <- -sqrt(max((r_inner^2) - (w_inner^2), 0))
+  theta_outer <- atan2(w_outer, x_outer) / pi
+  theta_inner <- atan2(w_inner, x_inner) / pi
+
   # Create the goal arc
   goal_arc_df <- rbind(
     data.frame(
-      x = goal_arc_extension,
-      y = goal_arc_radius
+      x = c(goal_arc_extension, x_outer),
+      y = c(w_outer, w_outer)
     ),
     create_circle(
       center = c(0, 0),
-      start = 0.5,
-      end = 1.5,
+      start = theta_outer,
+      end = 2 - theta_outer,
       r = goal_arc_radius
     ),
     data.frame(
-      x = c(goal_arc_extension, goal_arc_extension),
-      y = c(-goal_arc_radius, -goal_arc_radius + line_thickness)
+      x = c(x_outer, goal_arc_extension, goal_arc_extension, x_inner),
+      y = c(-w_outer, -w_outer, -w_inner, -w_inner)
     ),
     create_circle(
       center = c(0, 0),
-      start = 1.5,
-      end = 0.5,
-      r = goal_arc_radius - line_thickness
+      start = 2 - theta_inner,
+      end = theta_inner,
+      r = r_inner
     ),
     data.frame(
-      x = c(goal_arc_extension, goal_arc_extension),
-      y = c(goal_arc_radius - line_thickness, goal_arc_radius)
+      x = c(x_inner, goal_arc_extension, goal_arc_extension),
+      y = c(w_inner, w_inner, w_outer)
     )
   )
 
@@ -822,11 +842,13 @@ lacrosse_goal_arc <- function(goal_arc_extension = 0,
 
 #' Lacrosse Goal Fan
 #' 
-#' The goal arc fan is present on some fields (e.g. NCAAW) as a quarter-circle
-#' located around the goal. The anchor for this feature should be given as the
-#' center of the goal line, but the radius of the arc actually corresponds to
-#' a point on the goal circle (see [lacrosse_goal_circle()]) that runs through
-#' \code{y = 0}
+#' The goal fan is the 8-meter arc present on some fields (e.g. NCAAW). The
+#' anchor for this feature should be given as the center of the goal line. It is
+#' made of two straight lines that start where the goal line extended crosses the
+#' goal circle (see [lacrosse_goal_circle()]) and run towards the center of the
+#' field at 45 degrees to the goal line extended, joined by an arc of radius
+#' \code{goal_fan_radius} about the center of the goal line (NCAA Women's
+#' Lacrosse Rules, Rule 1, Section 6)
 #'
 #' @param goal_fan_radius The outer radius of the goal fan, measured from the
 #'   center of the goal line to the outer edge of the goal fan
@@ -839,61 +861,63 @@ lacrosse_goal_arc <- function(goal_arc_extension = 0,
 lacrosse_goal_fan <- function(goal_fan_radius = 0,
                               goal_circle_radius = 0,
                               line_thickness = 0) {
+  # Without an arc outside the goal circle there is no goal fan to draw
+  if (goal_fan_radius <= goal_circle_radius) {
+    return(data.frame(x = numeric(0), y = numeric(0)))
+  }
+
+  # Direction of the upper 45-degree line, towards the center of the field
+  direction <- c(-1, 1) / sqrt(2)
+
+  # Distance along the line from point p (in the direction above) to the circle
+  # of the given radius about the center of the goal line
+  distance_to_circle <- function(p, radius) {
+    b <- sum(p * direction)
+    -b + sqrt((b^2) - sum(p^2) + (radius^2))
+  }
+
+  # Outer edge of the line: from the goal circle on the goal line extended (B)
+  # to the arc (C)
+  b_outer <- c(0, goal_circle_radius)
+  c_outer <- b_outer + (distance_to_circle(b_outer, goal_fan_radius) * direction)
+
+  # Inner edge of the line: the same line moved towards the goal by the line's
+  # thickness, from the goal circle to the inner edge of the arc
+  inner_base <- b_outer + (line_thickness * c(-1, -1) / sqrt(2))
+  b_inner <- inner_base +
+    (distance_to_circle(inner_base, goal_circle_radius) * direction)
+  c_inner <- inner_base +
+    (distance_to_circle(inner_base, goal_fan_radius - line_thickness) * direction)
+
+  # Angles (in half-turns) at which the lines meet the arc
+  theta_outer <- atan2(c_outer[2], c_outer[1]) / pi
+  theta_inner <- atan2(c_inner[2], c_inner[1]) / pi
+
   # Create the goal fan
   goal_fan_df <- rbind(
     data.frame(
-      x = c(
-        goal_circle_radius * cos(0.5 * pi),
-        (goal_circle_radius * cos(0.5 * pi)) + (line_thickness * cos(0.75 * pi))
-      ),
-      y = c(
-        goal_circle_radius * sin(0.5 * pi),
-        (goal_circle_radius * sin(0.5 * pi)) + (line_thickness * sin(0.75 * pi))
-      )
+      x = c(b_outer[1], c_outer[1]),
+      y = c(b_outer[2], c_outer[2])
     ),
     create_circle(
-      center = c(goal_circle_radius, 0),
-      start = 0.75,
-      end = 1.25,
-      r = goal_fan_radius + goal_circle_radius
+      center = c(0, 0),
+      start = theta_outer,
+      end = 2 - theta_outer,
+      r = goal_fan_radius
     ),
     data.frame(
-      x = c(
-        goal_circle_radius * cos(1.5 * pi),
-        (goal_circle_radius * cos(1.5 * pi)) + (line_thickness * cos(1.25 * pi))
-      ),
-      y = c(
-        goal_circle_radius * sin(1.5 * pi),
-        (goal_circle_radius * sin(1.5 * pi)) - (line_thickness * sin(1.25 * pi))
-      )
+      x = c(c_outer[1], b_outer[1], b_inner[1], c_inner[1]),
+      y = -c(c_outer[2], b_outer[2], b_inner[2], c_inner[2])
     ),
     create_circle(
-      center = c(goal_circle_radius, 0),
-      start = 1.25 - (
-        (
-          line_thickness / (
-            goal_fan_radius + (goal_circle_radius) - line_thickness)
-        ) / pi
-      ),
-      end = 0.75 + (
-        (
-          line_thickness / (
-            goal_fan_radius + (goal_circle_radius) - line_thickness)
-        ) / pi
-      ),
-      r = goal_fan_radius + goal_circle_radius - line_thickness
+      center = c(0, 0),
+      start = 2 - theta_inner,
+      end = theta_inner,
+      r = goal_fan_radius - line_thickness
     ),
     data.frame(
-      x = c(
-        (goal_circle_radius * cos(0.5 * pi)) +
-          (line_thickness * cos(0.75 * pi)),
-        goal_circle_radius * cos(0.5 * pi)
-      ),
-      y = c(
-        (goal_circle_radius * sin(0.5 * pi)) -
-          (line_thickness * sin(0.75 * pi)),
-        goal_circle_radius * sin(0.5 * pi)
-      )
+      x = c(c_inner[1], b_inner[1], b_outer[1]),
+      y = c(c_inner[2], b_inner[2], b_outer[2])
     )
   )
 
@@ -981,6 +1005,43 @@ lacrosse_goal_mouth_hash_mark <- function(goal_mouth_hash_mark_length = 0,
 lacrosse_goal_mouth <- function(goal_mouth_radius = 0,
                                 line_thickness = 0,
                                 goal_mouth_semi_circle_separation = 0) {
+  # The goal mouth is the union of the half annulus and the straight stubs
+  # along the goal line extended (x in [-line_thickness, 0], |y| at least the
+  # semi-circle separation). The hole inside it is bounded by the inner arc and
+  # each stub's edge, and its corners are where the stub's inner edge
+  # (x = -line_thickness) or its end (|y| = separation) first meets the inner
+  # arc. The inner arc is cut back to start and end at those corners so that
+  # the band does not cross itself
+  inner_radius <- goal_mouth_radius - line_thickness
+  corner_x <- -min(
+    line_thickness,
+    sqrt(max(inner_radius^2 - goal_mouth_semi_circle_separation^2, 0))
+  )
+  corner_y <- sqrt(max(inner_radius^2 - corner_x^2, 0))
+
+  # With no hole left (the line is thicker than the inner radius and the stubs
+  # meet), the goal mouth is the solid half disk
+  if (inner_radius <= 0 || corner_y == 0) {
+    goal_mouth_df <- rbind(
+      create_circle(
+        center = c(0, 0),
+        start = 0.5,
+        end = 1.5,
+        r = goal_mouth_radius
+      ),
+      data.frame(
+        x = 0,
+        y = goal_mouth_radius
+      )
+    )
+
+    return(goal_mouth_df)
+  }
+
+  # The angle, in units of pi, between the bottom of the inner arc and the
+  # hole's corner
+  inner_arc_offset <- asin(-corner_x / inner_radius) / pi
+
   # Create the goal mouth
   goal_mouth_df <- rbind(
     data.frame(
@@ -1003,35 +1064,37 @@ lacrosse_goal_mouth <- function(goal_mouth_radius = 0,
       x = c(
         0,
         0,
-        -line_thickness,
-        -line_thickness
+        corner_x
       ),
       y = c(
         -goal_mouth_radius,
         -goal_mouth_semi_circle_separation,
-        -goal_mouth_semi_circle_separation,
-        -goal_mouth_radius + line_thickness
+        -goal_mouth_semi_circle_separation
       )
     ),
     create_circle(
       center = c(0, 0),
-      start = 1.5,
-      end = 0.5,
-      r = goal_mouth_radius - line_thickness
+      start = 1.5 - inner_arc_offset,
+      end = 0.5 + inner_arc_offset,
+      r = inner_radius
     ),
     data.frame(
       x = c(
-        -line_thickness,
-        -line_thickness,
+        corner_x,
         0
       ),
       y = c(
-        goal_mouth_radius - line_thickness,
         goal_mouth_semi_circle_separation,
         goal_mouth_semi_circle_separation
       )
     )
   )
+
+  # Where a corner lies on the inner arc or the goal line extended, it repeats
+  # the point next to it, so repeated points are dropped
+  is_repeat <- c(FALSE, rowSums(abs(diff(as.matrix(goal_mouth_df)))) < 1e-12)
+  goal_mouth_df <- goal_mouth_df[!is_repeat, ]
+  rownames(goal_mouth_df) <- NULL
 
   return(goal_mouth_df)
 }
@@ -1093,7 +1156,7 @@ lacrosse_goal_frame <- function(goal_frame_opening_interior = 0,
       (-goal_frame_opening_interior / 2) - goal_post_thickness,
       0,
       (goal_frame_opening_interior / 2) + goal_post_thickness,
-      0
+      goal_frame_opening_interior / 2
     )
   )
 
@@ -1127,60 +1190,11 @@ lacrosse_goal_net <- function(goal_frame_opening_interior = 0,
       goal_frame_opening_interior / 2,
       0,
       -goal_frame_opening_interior / 2,
-      goal_frame_opening_interior
+      goal_frame_opening_interior / 2
     )
   )
 
   return(goal_net_df)
-}
-
-#' Lacrosse Referee's Crease (Outline)
-#' 
-#' The referee's crease is a semi-circle on the "bottom" of the boards (in TV
-#' view), centered on the line y = 0 (the center of the center line)
-#'
-#' @param referee_crease_radius The radius of the referee's crease
-#' @param line_thickness The thickness with which to draw the referee's crease
-#'
-#' @return A data frame of the bounding coordinates of the referee's crease
-#'
-#' @keywords internal
-lacrosse_referee_crease <- function(referee_crease_radius = 0,
-                                    line_thickness = 0) {
-  referee_crease_df <- rbind(
-    data.frame(
-      x = c(referee_crease_radius),
-      y = c(0)
-    ),
-    create_circle(
-      center = c(0, 0),
-      start = 0,
-      end = 1,
-      r = referee_crease_radius
-    ),
-    data.frame(
-      x = c(
-        -referee_crease_radius,
-        -referee_crease_radius + line_thickness
-      ),
-      y = c(
-        0,
-        0
-      )
-    ),
-    create_circle(
-      center = c(0, 0),
-      start = 1,
-      end = 0,
-      r = referee_crease_radius - line_thickness
-    ),
-    data.frame(
-      x = c(referee_crease_radius),
-      y = c(0)
-    )
-  )
-
-  return(referee_crease_df)
 }
 
 #' Lacrosse Referee's Crease (Interior)
@@ -1281,7 +1295,7 @@ lacrosse_player_bench_outline <- function(bench_area_outline_thickness = 0,
       bench_length,
       0,
       0,
-      bench_area_outline_thickness
+      -bench_area_outline_thickness
     ),
     y = c(
       bench_area_outline_thickness,
@@ -1342,7 +1356,7 @@ lacrosse_player_bench_area_fill <- function(bench_area_outline_thickness = 0,
 #' the boards
 #'
 #' @param penalty_box_outline_thickness The thickness of the outline of the penalty box
-#' @param penalty_box_length The length of the penalty box
+#' @param penalty_box_length The interior length of the penalty box
 #' @param penalty_box_width The width of the penalty box
 #' @param penalty_box_separation The separation between the two penalty boxes
 #' @param penalty_box_depth The depth at which the penalty box extends from the
@@ -1360,11 +1374,13 @@ lacrosse_penalty_box_outline <- function(penalty_box_outline_thickness = 0,
     x = c(
       0,
       (penalty_box_separation / 2) +
+        penalty_box_length + (2 * penalty_box_outline_thickness),
+      (penalty_box_separation / 2) +
+        penalty_box_length + (2 * penalty_box_outline_thickness),
+      (penalty_box_separation / 2) +
         penalty_box_length + penalty_box_outline_thickness,
       (penalty_box_separation / 2) +
         penalty_box_length + penalty_box_outline_thickness,
-      (penalty_box_separation / 2) + penalty_box_length,
-      (penalty_box_separation / 2) + penalty_box_length,
       (penalty_box_separation / 2) + penalty_box_outline_thickness,
       (penalty_box_separation / 2) + penalty_box_outline_thickness,
       penalty_box_separation / 2,

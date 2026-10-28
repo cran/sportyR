@@ -28,7 +28,8 @@ when either an invalid or no value is passed to the function.
 The possible display ranges are:
 \describe{
 \item{\code{"full"}}{
-The full field. This is the default
+The full field, including any player benches, penalty boxes, and
+off-field officials' box outside it. This is the default
 }
 \item{\code{"offense"}}{
 The offensive half of the field. This is the right half of the field
@@ -111,6 +112,6 @@ specified league
 \examples{
 \dontrun{
   geom_lacrosse(league = "NCAA", rotation = 270, display_range = "offense")
-  geom_lacrosse(league = "FIVB", field_units = "ft")
+  geom_lacrosse(league = "NLL", field_units = "ft")
 }
 }

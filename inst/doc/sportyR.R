@@ -31,6 +31,9 @@ cani_plot_sport("soccer")
 # See if a league comes pre-packaged with sportyR
 cani_plot_league("PHF")
 
+## ----cani-example-3-----------------------------------------------------------
+cani_plot_sport("softball")
+
 ## ----example-basketball-court, dev = "png"------------------------------------
 # Draw a regulation NBA basketball court
 geom_basketball("nba")

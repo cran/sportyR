@@ -11,10 +11,12 @@
 #' @keywords internal
 `%or%` <- function(spec_val, default_val) {
   cmp <- function(spec_val, default_val) {
+      # Check the length before is.na() / is.nan(): an empty JSON array arrives
+      # as list(), and is.nan() has no method for lists
       if (is.null(spec_val) ||
+          length(spec_val) == 0 ||
           is.na(spec_val) ||
-          is.nan(spec_val) ||
-          length(spec_val) == 0) {
+          is.nan(spec_val)) {
       return(default_val)
     } else {
       return(spec_val)
@@ -141,4 +143,26 @@ load_default_parameters <- function(league = "",
   sheet_units <<- sheet_units
   xlims <<- xlims
   ylims <<- ylims
+}
+
+#' Check If Two Colors Render the Same
+#'
+#' Compare two colors by their RGBA values rather than their spelling, so that
+#' \code{"white"}, \code{"#FFFFFF"}, \code{"#ffffff"} and \code{"#ffffffff"} all
+#' count as the same color
+#'
+#' @param a The first color, in any form understood by
+#'   \code{grDevices::col2rgb()}
+#' @param b The second color, in any form understood by
+#'   \code{grDevices::col2rgb()}
+#'
+#' @return A boolean indicating if the two colors have identical RGBA values
+#'
+#' @keywords internal
+same_color <- function(a, b) {
+  identical(
+    # unname() drops the column names col2rgb() copies from a named vector
+    unname(grDevices::col2rgb(a, alpha = TRUE)),
+    unname(grDevices::col2rgb(b, alpha = TRUE))
+  )
 }
